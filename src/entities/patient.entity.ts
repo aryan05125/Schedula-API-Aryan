@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 import { Doctor } from './doctor.entity';
 
@@ -8,12 +8,10 @@ export class Patient {
   id: number;
 
   @Column()
-  name: string;
-
-  @Column()
   age: number;
 
-  @ManyToOne(() => User, (user) => user.patients, { onDelete: 'CASCADE' })
+  @OneToOne(() => User, (user) => user.patient, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @ManyToOne(() => Doctor, (doctor) => doctor.patients, { onDelete: 'CASCADE' })
