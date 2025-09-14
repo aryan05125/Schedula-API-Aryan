@@ -15,7 +15,6 @@ export class Doctor {
   @Column()
   experience: number;
 
-  // Relation: Doctor ↔ Patients (One-to-Many)
   @OneToMany(() => Patient, (patient) => patient.doctor)
   patients: Patient[];
 }

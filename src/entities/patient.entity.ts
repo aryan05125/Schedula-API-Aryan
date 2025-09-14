@@ -25,7 +25,6 @@ export class Patient {
   @Column({ unique: true })
   phone: string;
 
-  // ✅ Explicit type set → varchar, nullable true
   @Column({ type: 'varchar', nullable: true })
   password: string | null;
 
@@ -35,11 +34,9 @@ export class Patient {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // Relation: Many patients → One doctor
   @ManyToOne(() => Doctor, (doctor) => doctor.patients, { nullable: true })
   doctor: Doctor;
 
-  // Relation: One patient ↔ One user
   @OneToOne(() => User, (user) => user.patient)
   user: User;
 
@@ -49,9 +46,6 @@ export class Patient {
   }
 
   async validatePassword(password: string): Promise<boolean> {
-    if (!this.password) {
-      return false;
-    }
-    return await bcrypt.compare(password, this.password);
+    return bcrypt.compare(password, this.password ?? '');
   }
 }
