@@ -7,11 +7,13 @@ import { AuthModule } from './auth/auth.module';
 import { PatientModule } from './patient/patient.module';
 import { VerificationModule } from './verification/verification.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { AppointmentModule } from './appointment/appointment.module';
 
 import { User } from './entities/user.entity';
 import { Patient } from './entities/patient.entity';
 import { Doctor } from './entities/doctor.entity';
 import { Otp } from './entities/otp.entity';
+import { Appointment } from './appointment/entities/appointment.entity';
 
 @Module({
   imports: [
@@ -26,7 +28,7 @@ import { Otp } from './entities/otp.entity';
       username: process.env.DB_USERNAME ?? 'postgres',
       password: process.env.DB_PASSWORD ?? 'aryan512',
       database: process.env.DB_NAME ?? 'internship_db',
-      entities: [User, Patient, Doctor, Otp], // ❌ Appointment removed
+      entities: [User, Patient, Doctor, Otp, Appointment], // ✅ Appointment added
       synchronize: true, // ❗ Disable in production
     }),
 
@@ -36,6 +38,7 @@ import { Otp } from './entities/otp.entity';
     PatientModule,
     VerificationModule,
     OnboardingModule,
+    AppointmentModule, // ✅ Appointment module added
   ],
   controllers: [],
   providers: [],

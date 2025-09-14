@@ -6,10 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Doctor } from './doctor.entity';
 import { User } from './user.entity';
+import { Appointment } from '../appointment/entities/appointment.entity';
 
 @Entity('patients')
 export class Patient {
@@ -39,6 +41,9 @@ export class Patient {
 
   @OneToOne(() => User, (user) => user.patient)
   user: User;
+
+  @OneToMany(() => Appointment, (appointment) => appointment.patient)
+  appointments: Appointment[];
 
   async setPassword(password: string) {
     const salt = await bcrypt.genSalt(10);
