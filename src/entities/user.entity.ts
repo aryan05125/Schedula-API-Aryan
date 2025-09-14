@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Patient } from './patient.entity';
 
@@ -36,7 +37,8 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // ADD RELATION TO PATIENT
-  @OneToOne(() => Patient, (patient) => patient.user)
+  // Relation: One user ↔ One patient
+  @OneToOne(() => Patient, (patient) => patient.user, { cascade: true })
+  @JoinColumn()
   patient: Patient;
 }
