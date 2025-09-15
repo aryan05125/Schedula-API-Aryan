@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Patient } from '../entities/patient.entity';
+import { ConfirmAppointmentDto } from './dto/confirm-appointment.dto';
 
 @Injectable()
 export class AppointmentService {
@@ -103,19 +104,32 @@ export class AppointmentService {
     ];
   }
 
-  // 3️⃣ Confirm appointment (✅ fixed to use relations)
-  async confirmAppointment(patientId: string, doctorId: number, slot: string) {
+  // 3️⃣ Confirm appointment (✅ DTO handled)
+  async confirmAppointment(dto: ConfirmAppointmentDto) {
+    const { patientId, doctorId, slotId, time } = dto;
+
     const patient = await this.patientRepo.findOne({ where: { id: patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
 
     const doctor = await this.doctorRepo.findOne({ where: { id: doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
+    let finalTime = time;
+
+    if (doctor.scheduleType === 'wave') {
+      const slots = this.generateWaveSlots(doctor);
+      const slot = slots.find((s) => s.slotId === Number(slotId));
+      if (!slot) throw new NotFoundException('Slot not found');
+      finalTime = slot.time;
+    } else if (doctor.scheduleType === 'stream') {
+      finalTime = time ?? doctor.consultingStart;
+    }
+
     const appointment = this.appointmentRepo.create({
-      patient, // relation
-      doctor,  // relation
+      patient,
+      doctor,
       date: new Date().toISOString().split('T')[0],
-      time: slot,
+      time: finalTime,
       status: 'confirmed',
     });
 

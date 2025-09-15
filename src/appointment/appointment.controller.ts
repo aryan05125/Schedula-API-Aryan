@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Post, Body, Query } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
+import { ConfirmAppointmentDto } from './dto/confirm-appointment.dto';
 
 @Controller('api/v1')
 export class AppointmentController {
@@ -24,14 +25,10 @@ export class AppointmentController {
     return this.appointmentService.getDoctorSlots(id, date);
   }
 
-  // 3️⃣ Confirm appointment
+  // 3️⃣ Confirm appointment (✅ DTO used)
   @Post('appointments/confirm')
-  confirmAppointment(
-    @Body('patientId') patientId: string,
-    @Body('doctorId') doctorId: number,
-    @Body('time') time: string,
-  ) {
-    return this.appointmentService.confirmAppointment(patientId, doctorId, time);
+  confirmAppointment(@Body() dto: ConfirmAppointmentDto) {
+    return this.appointmentService.confirmAppointment(dto);
   }
 
   // 4️⃣ Get appointment details
