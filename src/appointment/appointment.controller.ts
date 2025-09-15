@@ -20,8 +20,8 @@ export class AppointmentController {
 
   // 2️⃣ Get available slots for a doctor
   @Get('doctors/:id/available-slots')
-  getDoctorSlots(@Param('id') id: number) {
-    return this.appointmentService.getDoctorSlots(id);
+  getDoctorSlots(@Param('id') id: number, @Query('date') date?: string) {
+    return this.appointmentService.getDoctorSlots(id, date);
   }
 
   // 3️⃣ Confirm appointment

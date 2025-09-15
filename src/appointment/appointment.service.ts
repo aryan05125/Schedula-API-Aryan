@@ -49,20 +49,62 @@ export class AppointmentService {
     return query.getMany();
   }
 
-  // 2️⃣ Slots
-  async getDoctorSlots(doctorId: number) {
+  // 2️⃣ Slots (Wave & Stream Scheduling)
+  async getDoctorSlots(doctorId: number, date?: string) {
     const doctor = await this.doctorRepo.findOne({ where: { id: doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
+    if (doctor.scheduleType === 'wave') {
+      return this.generateWaveSlots(doctor);
+    } else {
+      return this.generateStreamSlot(doctor);
+    }
+  }
+
+  private generateWaveSlots(doctor: Doctor) {
+    const slots: { slotId: number; time: string; capacity: number }[] = [];
+
+    if (!doctor.consultingStart || !doctor.consultingEnd || !doctor.slotDuration) {
+      return [];
+    }
+
+    let [startHour, startMin] = doctor.consultingStart.split(':').map(Number);
+    let [endHour, endMin] = doctor.consultingEnd.split(':').map(Number);
+
+    let start = startHour * 60 + startMin;
+    let end = endHour * 60 + endMin;
+
+    let slotId = 1;
+    for (let time = start; time + doctor.slotDuration <= end; time += doctor.slotDuration) {
+      const h1 = Math.floor(time / 60).toString().padStart(2, '0');
+      const m1 = (time % 60).toString().padStart(2, '0');
+      const h2 = Math.floor((time + doctor.slotDuration) / 60)
+        .toString()
+        .padStart(2, '0');
+      const m2 = ((time + doctor.slotDuration) % 60).toString().padStart(2, '0');
+
+      slots.push({
+        slotId: slotId++,
+        time: `${h1}:${m1}–${h2}:${m2}`,
+        capacity: doctor.capacityPerSlot ?? 1,
+      });
+    }
+
+    return slots;
+  }
+
+  private generateStreamSlot(doctor: Doctor) {
     return [
-      { slotId: 1, time: '10:00–10:15' },
-      { slotId: 2, time: '10:15–10:30' },
-      { slotId: 3, time: '10:30–10:45' },
+      {
+        slotId: 1,
+        time: `${doctor.consultingStart}–${doctor.consultingEnd}`,
+        capacity: doctor.totalCapacity ?? 1,
+      },
     ];
   }
 
-  // 3️⃣ Confirm appointment
-  async confirmAppointment(patientId: string, doctorId: number, time: string) {
+  // 3️⃣ Confirm appointment (✅ fixed to use relations)
+  async confirmAppointment(patientId: string, doctorId: number, slot: string) {
     const patient = await this.patientRepo.findOne({ where: { id: patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
 
@@ -70,10 +112,10 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     const appointment = this.appointmentRepo.create({
-      patient,
-      doctor,
+      patient, // relation
+      doctor,  // relation
       date: new Date().toISOString().split('T')[0],
-      time,
+      time: slot,
       status: 'confirmed',
     });
 

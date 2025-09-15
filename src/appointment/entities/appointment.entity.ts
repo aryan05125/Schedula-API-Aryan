@@ -23,7 +23,7 @@ export class Appointment {
   date: string;
 
   @Column()
-  time: string;
+  time: string; // ✅ only once now
 
   @Column({ default: 'confirmed' })
   status: string;
