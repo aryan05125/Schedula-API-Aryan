@@ -10,15 +10,43 @@ export class AppointmentService {
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepo: Repository<Appointment>,
+
     @InjectRepository(Doctor)
     private readonly doctorRepo: Repository<Doctor>,
+
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
   ) {}
 
-  // 1️⃣ Doctors list
-  async getDoctors(): Promise<Doctor[]> {
-    return this.doctorRepo.find();
+  // 1️⃣ Doctors list with filters
+  async getDoctors(filters?: any): Promise<Doctor[]> {
+    const query = this.doctorRepo.createQueryBuilder('doctor');
+
+    if (filters?.specialization) {
+      query.andWhere('doctor.specialization = :specialization', {
+        specialization: filters.specialization,
+      });
+    }
+
+    if (filters?.location) {
+      query.andWhere('doctor.location = :location', {
+        location: filters.location,
+      });
+    }
+
+    if (filters?.experience) {
+      query.andWhere('doctor.experience >= :experience', {
+        experience: filters.experience,
+      });
+    }
+
+    if (filters?.maxFee) {
+      query.andWhere('doctor.fee <= :maxFee', {
+        maxFee: filters.maxFee,
+      });
+    }
+
+    return query.getMany();
   }
 
   // 2️⃣ Slots
@@ -33,7 +61,7 @@ export class AppointmentService {
     ];
   }
 
-  // 4️⃣ Confirm appointment
+  // 3️⃣ Confirm appointment
   async confirmAppointment(patientId: string, doctorId: number, time: string) {
     const patient = await this.patientRepo.findOne({ where: { id: patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
@@ -52,7 +80,7 @@ export class AppointmentService {
     return this.appointmentRepo.save(appointment);
   }
 
-  // 5️⃣ Appointment details
+  // 4️⃣ Appointment details
   async getAppointment(id: string) {
     const appointment = await this.appointmentRepo.findOne({
       where: { id },

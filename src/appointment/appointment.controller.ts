@@ -1,14 +1,21 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Query } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 
 @Controller('api/v1')
 export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}
 
-  // 1️⃣ Get list of doctors
+  // 1️⃣ Get list of doctors (with filters)
   @Get('doctors')
-  getDoctors() {
-    return this.appointmentService.getDoctors();
+  async getDoctors(
+    @Query('specialization') specialization?: string,
+    @Query('location') location?: string,
+    @Query('experience') experience?: number,
+    @Query('maxFee') maxFee?: number,
+  ) {
+    const filters = { specialization, location, experience, maxFee };
+    const doctors = await this.appointmentService.getDoctors(filters);
+    return { success: true, doctors };
   }
 
   // 2️⃣ Get available slots for a doctor
@@ -17,7 +24,7 @@ export class AppointmentController {
     return this.appointmentService.getDoctorSlots(id);
   }
 
-  // 4️⃣ Confirm appointment
+  // 3️⃣ Confirm appointment
   @Post('appointments/confirm')
   confirmAppointment(
     @Body('patientId') patientId: string,
@@ -27,7 +34,7 @@ export class AppointmentController {
     return this.appointmentService.confirmAppointment(patientId, doctorId, time);
   }
 
-  // 5️⃣ Get appointment details
+  // 4️⃣ Get appointment details
   @Get('appointments/:id')
   getAppointment(@Param('id') id: string) {
     return this.appointmentService.getAppointment(id);
