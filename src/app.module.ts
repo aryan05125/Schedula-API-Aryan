@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { HelloModule } from './hello/hello.module';
 import { AuthModule } from './auth/auth.module';
 import { PatientModule } from './patient/patient.module';
@@ -19,7 +18,6 @@ import { Appointment } from './appointment/entities/appointment.entity';
   imports: [
     // Global config (env variables)
     ConfigModule.forRoot({ isGlobal: true }),
-
     // Database config
     TypeOrmModule.forRoot({
       type: 'postgres',

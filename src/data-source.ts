@@ -3,7 +3,6 @@ import { User } from './entities/user.entity';
 import { Doctor } from './entities/doctor.entity';
 import { Patient } from './entities/patient.entity';
 
-// 🔗 Database Connection Config
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: 'localhost',
@@ -13,5 +12,5 @@ export const AppDataSource = new DataSource({
   database: 'internship_db',
   entities: [User, Doctor, Patient],
   migrations: ['src/migrations/*.ts'],
-  synchronize: false,
+  synchronize: false, // keep migrations
 });

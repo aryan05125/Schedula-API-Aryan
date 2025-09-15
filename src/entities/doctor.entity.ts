@@ -21,4 +21,4 @@ export class Doctor {
 
   @OneToMany(() => Appointment, (appointment) => appointment.doctor)
   appointments: Appointment[];
-}
+} // <-- Closing bracket added
