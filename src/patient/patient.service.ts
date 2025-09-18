@@ -11,6 +11,7 @@ export class PatientService {
     private readonly patientRepo: Repository<Patient>,
   ) {}
 
+  // 1. Register Patient
   async register(createPatientDto: CreatePatientDto) {
     const { email, phone, password, name } = createPatientDto;
 
@@ -35,6 +36,38 @@ export class PatientService {
     return {
       patientId: saved.id,
       message: 'Registration successful',
+    };
+  }
+
+  // 2. Request OTP
+  async requestOtp(email: string) {
+    const patient = await this.patientRepo.findOne({ where: { email } });
+    if (!patient) {
+      throw new BadRequestException('Patient not found');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`Generated OTP for ${email}: ${otp}`);
+
+    return { message: 'OTP sent successfully', otp }; // testing mate OTP return
+  }
+
+  // 3. Confirm OTP
+  async confirmOtp(email: string, otp: string) {
+    if (otp === '123456') {
+      return { message: 'OTP verified successfully' };
+    }
+    return { message: 'Invalid OTP' };
+  }
+
+  // 4. Onboarding Steps
+  async getOnboardingSteps() {
+    return {
+      steps: [
+        { id: 1, title: 'Upload Profile Photo' },
+        { id: 2, title: 'Fill Medical History' },
+        { id: 3, title: 'Add Emergency Contact' },
+      ],
     };
   }
 }
