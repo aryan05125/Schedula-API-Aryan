@@ -1,18 +1,42 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+} from 'typeorm';
 import { Patient } from './patient.entity';
+
+export type UserRole = 'doctor' | 'patient';
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ unique: true })
-  username: string;
+  email: string;
 
   @Column()
-  password: string;
+  name: string;
 
-  // Relation: User ↔ Patient (One-to-One)
+  @Column({ type: 'varchar', default: 'google' })
+  provider: string; // 'google'
+
+  @Column({ type: 'varchar', nullable: true })
+  password: string | null; // not used for google
+
+  @Column({ type: 'varchar' })
+  role: UserRole;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  // ADD RELATION TO PATIENT
   @OneToOne(() => Patient, (patient) => patient.user)
   patient: Patient;
 }
