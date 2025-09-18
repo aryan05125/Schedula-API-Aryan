@@ -16,9 +16,15 @@ export class Doctor {
   @Column()
   experience: number;
 
+  @Column({ nullable: true })
+  location: string;
+
+  @Column({ type: 'decimal', nullable: true })
+  fee: number;
+
   @OneToMany(() => Patient, (patient) => patient.doctor)
   patients: Patient[];
 
   @OneToMany(() => Appointment, (appointment) => appointment.doctor)
   appointments: Appointment[];
-} // <-- Closing bracket added
+}
