@@ -6,7 +6,6 @@ import { ConfirmAppointmentDto } from './dto/confirm-appointment.dto';
 export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}
 
-  // 1️⃣ Get list of doctors (with filters)
   @Get('doctors')
   async getDoctors(
     @Query('specialization') specialization?: string,
@@ -19,25 +18,19 @@ export class AppointmentController {
     return { success: true, doctors };
   }
 
-  // 2️⃣ Get available slots for a doctor
   @Get('doctors/:id/available-slots')
   getDoctorSlots(@Param('id') id: number, @Query('date') date?: string) {
     return this.appointmentService.getDoctorSlots(id, date);
   }
 
-  // 3️⃣ Confirm appointment
   @Post('appointments/confirm')
   confirmAppointment(@Body() dto: ConfirmAppointmentDto) {
     return this.appointmentService.confirmAppointment(dto);
   }
 
-  // 4️⃣ Get appointment details
   @Get('appointments/:id')
   async getAppointment(@Param('id') id: string) {
     const appointment = await this.appointmentService.getAppointment(id);
-    return {
-      success: true,
-      appointment,
-    };
+    return { success: true, appointment };
   }
 }

@@ -30,7 +30,7 @@ export class Doctor {
   consultingStart: string; // e.g. "09:00"
 
   @Column({ type: 'varchar', nullable: true })
-  consultingEnd: string;   // e.g. "12:00"
+  consultingEnd: string; // e.g. "12:00"
 
   @Column({ type: 'int', nullable: true })
   slotDuration: number; // in minutes (for wave scheduling)
@@ -40,6 +40,10 @@ export class Doctor {
 
   @Column({ type: 'int', nullable: true })
   totalCapacity: number; // for stream scheduling
+
+  // 🔁 Recurring pattern: which days doctor is available
+  @Column('simple-array', { nullable: true })
+  recurringDays: string[]; // e.g. ["monday", "wednesday", "friday"]
 
   @OneToMany(() => Patient, (patient) => patient.doctor)
   patients: Patient[];
