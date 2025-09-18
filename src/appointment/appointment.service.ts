@@ -28,19 +28,16 @@ export class AppointmentService {
         specialization: filters.specialization,
       });
     }
-
     if (filters?.location) {
       query.andWhere('doctor.location = :location', {
         location: filters.location,
       });
     }
-
     if (filters?.experience) {
       query.andWhere('doctor.experience >= :experience', {
         experience: filters.experience,
       });
     }
-
     if (filters?.maxFee) {
       query.andWhere('doctor.fee <= :maxFee', {
         maxFee: filters.maxFee,
@@ -104,7 +101,7 @@ export class AppointmentService {
     ];
   }
 
-  // 3️⃣ Confirm appointment (✅ DTO handled)
+  // 3️⃣ Confirm appointment
   async confirmAppointment(dto: ConfirmAppointmentDto) {
     const { patientId, doctorId, slotId, time } = dto;
 
@@ -144,6 +141,25 @@ export class AppointmentService {
     });
 
     if (!appointment) throw new NotFoundException('Appointment not found');
-    return appointment;
+
+    // Return minimal doctor & patient details
+    return {
+      id: appointment.id,
+      date: appointment.date,
+      time: appointment.time,
+      status: appointment.status,
+      createdAt: appointment.createdAt,
+      doctor: {
+        id: appointment.doctor.id,
+        name: appointment.doctor.name,
+        specialization: appointment.doctor.specialization,
+        location: appointment.doctor.location,
+      },
+      patient: {
+        id: appointment.patient.id,
+        name: appointment.patient.name,
+        email: appointment.patient.email,
+      },
+    };
   }
 }

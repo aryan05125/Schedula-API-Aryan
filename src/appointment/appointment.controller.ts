@@ -25,7 +25,7 @@ export class AppointmentController {
     return this.appointmentService.getDoctorSlots(id, date);
   }
 
-  // 3️⃣ Confirm appointment (✅ DTO used)
+  // 3️⃣ Confirm appointment
   @Post('appointments/confirm')
   confirmAppointment(@Body() dto: ConfirmAppointmentDto) {
     return this.appointmentService.confirmAppointment(dto);
@@ -33,7 +33,11 @@ export class AppointmentController {
 
   // 4️⃣ Get appointment details
   @Get('appointments/:id')
-  getAppointment(@Param('id') id: string) {
-    return this.appointmentService.getAppointment(id);
+  async getAppointment(@Param('id') id: string) {
+    const appointment = await this.appointmentService.getAppointment(id);
+    return {
+      success: true,
+      appointment,
+    };
   }
 }
