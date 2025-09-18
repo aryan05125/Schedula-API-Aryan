@@ -1,3 +1,4 @@
+// confirm-appointment.dto.ts
 import { IsUUID, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class ConfirmAppointmentDto {
@@ -13,5 +14,9 @@ export class ConfirmAppointmentDto {
 
   @IsOptional()
   @IsString()
-  time?: string;    // for stream scheduling
+  date?: string;    // 👈 new field for custom date (YYYY-MM-DD)
+
+  @IsOptional()
+  @IsString()
+  time?: string;    // optional for stream scheduling
 }
