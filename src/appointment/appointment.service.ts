@@ -11,10 +11,8 @@ export class AppointmentService {
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepo: Repository<Appointment>,
-
     @InjectRepository(Doctor)
     private readonly doctorRepo: Repository<Doctor>,
-
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
   ) {}
@@ -45,12 +43,15 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     // 📅 Recurring pattern check
+
     if (date && doctor.recurringDays?.length) {
       const reqDate = new Date(date);
       const weekday = reqDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
       if (!doctor.recurringDays.includes(weekday)) {
         return []; // no slots if doctor not available that day
+
+        return [];
       }
     }
 
@@ -73,7 +74,6 @@ export class AppointmentService {
 
     let start = startHour * 60 + startMin;
     let end = endHour * 60 + endMin;
-
     let slotId = 1;
     for (let time = start; time + doctor.slotDuration <= end; time += doctor.slotDuration) {
       const h1 = Math.floor(time / 60).toString().padStart(2, '0');
@@ -88,7 +88,6 @@ export class AppointmentService {
         capacity: doctor.capacityPerSlot ?? 1,
       });
     }
-
     return slots;
   }
 
@@ -114,6 +113,7 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     const appointmentDate = date ?? new Date().toISOString().split('T')[0]; // fallback today
+    const appointmentDate = date ?? new Date().toISOString().split('T')[0];
     let reportingTime: string;
 
     if (doctor.scheduleType === 'wave') {
@@ -210,5 +210,46 @@ export class AppointmentService {
         email: appointment.patient.email,
       },
     };
+  }
+}
+
+
+  // 5️⃣ Get patient appointments with filter (upcoming, past, cancelled)
+  async getPatientAppointments(patientId: string, filter?: string) {
+    const patient = await this.patientRepo.findOne({ where: { id: patientId } });
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const today = new Date().toISOString().split('T')[0];
+    const qb = this.appointmentRepo
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.doctor', 'doctor')
+      .leftJoinAndSelect('appointment.patient', 'patient')
+      .where('patient.id = :patientId', { patientId });
+
+    if (filter === 'upcoming') {
+      qb.andWhere('appointment.date >= :today', { today }).andWhere('appointment.status = :status', { status: 'confirmed' });
+    } else if (filter === 'past') {
+      qb.andWhere('appointment.date < :today', { today }).andWhere('appointment.status = :status', { status: 'confirmed' });
+    } else if (filter === 'cancelled') {
+      qb.andWhere('appointment.status = :status', { status: 'cancelled' });
+    }
+
+    return qb.orderBy('appointment.date', 'ASC').getMany();
+  }
+
+  // 6️⃣ Cancel appointment
+  async cancelAppointment(id: string) {
+    const appointment = await this.appointmentRepo.findOne({ where: { id } });
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    if (appointment.status === 'cancelled') {
+      throw new BadRequestException('Appointment already cancelled');
+    }
+
+    appointment.status = 'cancelled';
+    return this.appointmentRepo.save(appointment);
   }
 }
