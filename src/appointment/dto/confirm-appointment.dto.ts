@@ -10,10 +10,15 @@ export class ConfirmAppointmentDto {
 
   @IsOptional()
   @IsString()
-  slotId?: string;  // for wave scheduling
+  slotId?: string; // for wave scheduling
 
   @IsOptional()
   @IsString()
+  time?: string; // optional for stream scheduling
+
+  @IsOptional()
+  @IsString()
+  date?: string; // 📅 allow booking for specific date (YYYY-MM-DD)
   date?: string;    // 👈 new field for custom date (YYYY-MM-DD)
 
   @IsOptional()

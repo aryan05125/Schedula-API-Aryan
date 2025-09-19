@@ -42,11 +42,15 @@ export class AppointmentService {
     const doctor = await this.doctorRepo.findOne({ where: { id: doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
+    // 📅 Recurring pattern check
+
     if (date && doctor.recurringDays?.length) {
       const reqDate = new Date(date);
       const weekday = reqDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
       if (!doctor.recurringDays.includes(weekday)) {
+        return []; // no slots if doctor not available that day
+
         return [];
       }
     }
@@ -108,6 +112,7 @@ export class AppointmentService {
     const doctor = await this.doctorRepo.findOne({ where: { id: doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
+    const appointmentDate = date ?? new Date().toISOString().split('T')[0]; // fallback today
     const appointmentDate = date ?? new Date().toISOString().split('T')[0];
     let reportingTime: string;
 
@@ -206,6 +211,8 @@ export class AppointmentService {
       },
     };
   }
+}
+
 
   // 5️⃣ Get patient appointments with filter (upcoming, past, cancelled)
   async getPatientAppointments(patientId: string, filter?: string) {
