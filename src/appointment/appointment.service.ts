@@ -43,15 +43,12 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     // 📅 Recurring pattern check
-
     if (date && doctor.recurringDays?.length) {
       const reqDate = new Date(date);
       const weekday = reqDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
       if (!doctor.recurringDays.includes(weekday)) {
         return []; // no slots if doctor not available that day
-
-        return [];
       }
     }
 
@@ -75,6 +72,7 @@ export class AppointmentService {
     let start = startHour * 60 + startMin;
     let end = endHour * 60 + endMin;
     let slotId = 1;
+
     for (let time = start; time + doctor.slotDuration <= end; time += doctor.slotDuration) {
       const h1 = Math.floor(time / 60).toString().padStart(2, '0');
       const m1 = (time % 60).toString().padStart(2, '0');
@@ -104,7 +102,7 @@ export class AppointmentService {
 
   // 3️⃣ Confirm appointment (with reporting time logic and custom date support)
   async confirmAppointment(dto: ConfirmAppointmentDto) {
-    const { patientId, doctorId, slotId, date, time } = dto;
+    const { patientId, doctorId, slotId, date } = dto;
 
     const patient = await this.patientRepo.findOne({ where: { id: patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
@@ -112,7 +110,6 @@ export class AppointmentService {
     const doctor = await this.doctorRepo.findOne({ where: { id: doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
-    const appointmentDate = date ?? new Date().toISOString().split('T')[0]; // fallback today
     const appointmentDate = date ?? new Date().toISOString().split('T')[0];
     let reportingTime: string;
 
@@ -211,8 +208,6 @@ export class AppointmentService {
       },
     };
   }
-}
-
 
   // 5️⃣ Get patient appointments with filter (upcoming, past, cancelled)
   async getPatientAppointments(patientId: string, filter?: string) {
