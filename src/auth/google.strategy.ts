@@ -11,15 +11,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     private readonly config: ConfigService,
   ) {
     super({
-      clientID: config.get<string>('GOOGLE_CLIENT_ID') || '', // fallback empty string
+      clientID: config.get<string>('GOOGLE_CLIENT_ID') || '',
       clientSecret: config.get<string>('GOOGLE_CLIENT_SECRET') || '',
       callbackURL: config.get<string>('GOOGLE_CALLBACK_URL') || '',
       scope: ['profile', 'email'],
-      passReqToCallback: true, // so we can read req.query.role or state
-    } as StrategyOptionsWithRequest); // cast for TS
+      passReqToCallback: true,
+    } as StrategyOptionsWithRequest);
   }
 
-  // passReqToCallback = true => first param is req
   async validate(
     req: any,
     accessToken: string,
@@ -28,18 +27,15 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: Function,
   ) {
     try {
-      // role is passed via state (?state=doctor) OR req.query.role
       const roleQuery =
         (req && req.query && req.query.role) ||
         (req && req.query && req.query.state);
       let role: 'doctor' | 'patient' = 'patient';
       if (roleQuery && roleQuery === 'doctor') role = 'doctor';
 
-      // Use AuthService to find/create user
       const user = await this.authService.findOrCreateFromGoogle(profile, role);
       const token = this.authService.getJwtForUser(user);
 
-      // return object accessible as req.user
       return done(null, {
         token,
         user: {
