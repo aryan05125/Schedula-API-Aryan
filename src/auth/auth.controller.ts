@@ -15,7 +15,6 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req: any): Promise<AuthResponseDto> {
-    // After successful OAuth
     return req.user; // { token, user }
   }
 }
