@@ -1,4 +1,3 @@
-// confirm-appointment.dto.ts
 import { IsUUID, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class ConfirmAppointmentDto {
@@ -9,19 +8,14 @@ export class ConfirmAppointmentDto {
   doctorId: number;
 
   @IsOptional()
+  @IsNumber()
+  slotId?: number; // ✅ slotId should be number (wave scheduling)
+
+  @IsOptional()
   @IsString()
-  slotId?: string; // for wave scheduling
+  date?: string; // 📅 YYYY-MM-DD
 
   @IsOptional()
   @IsString()
   time?: string; // optional for stream scheduling
-
-  @IsOptional()
-  @IsString()
-  date?: string; // 📅 allow booking for specific date (YYYY-MM-DD)
-  date?: string;    // 👈 new field for custom date (YYYY-MM-DD)
-
-  @IsOptional()
-  @IsString()
-  time?: string;    // optional for stream scheduling
 }

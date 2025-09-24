@@ -13,12 +13,12 @@ import { Patient } from './entities/patient.entity';
 import { Doctor } from './entities/doctor.entity';
 import { Otp } from './entities/otp.entity';
 import { Appointment } from './appointment/entities/appointment.entity';
+import { Slot } from './slot/entities/slot.entity';
+import { SlotModule } from './slot/slot.module';
 
 @Module({
   imports: [
-    // Global config (env variables)
     ConfigModule.forRoot({ isGlobal: true }),
-    // Database config
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST ?? 'localhost',
@@ -26,17 +26,16 @@ import { Appointment } from './appointment/entities/appointment.entity';
       username: process.env.DB_USERNAME ?? 'postgres',
       password: process.env.DB_PASSWORD ?? 'aryan512',
       database: process.env.DB_NAME ?? 'internship_db',
-      entities: [User, Patient, Doctor, Otp, Appointment], // ✅ Appointment added
-      synchronize: true, // ❗ Disable in production
+      entities: [User, Patient, Doctor, Otp, Appointment, Slot],
+      synchronize: true,
     }),
-
-    // Feature modules
     HelloModule,
     AuthModule,
     PatientModule,
     VerificationModule,
     OnboardingModule,
-    AppointmentModule, // ✅ Appointment module added
+    AppointmentModule,
+    SlotModule,
   ],
   controllers: [],
   providers: [],
