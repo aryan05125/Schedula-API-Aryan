@@ -5,6 +5,7 @@ import { Appointment } from './entities/appointment.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Patient } from '../entities/patient.entity';
 import { ConfirmAppointmentDto } from './dto/confirm-appointment.dto';
+import { Slot } from '../slot/entities/slot.entity';
 
 @Injectable()
 export class AppointmentService {
@@ -15,6 +16,8 @@ export class AppointmentService {
     private readonly doctorRepo: Repository<Doctor>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
+    @InjectRepository(Slot)
+    private readonly slotRepo: Repository<Slot>,
   ) {}
 
   // 1️⃣ Doctors list with filters
@@ -43,15 +46,12 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     // 📅 Recurring pattern check
-
     if (date && doctor.recurringDays?.length) {
       const reqDate = new Date(date);
       const weekday = reqDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
       if (!doctor.recurringDays.includes(weekday)) {
         return []; // no slots if doctor not available that day
-
-        return [];
       }
     }
 
@@ -102,9 +102,9 @@ export class AppointmentService {
     ];
   }
 
-  // 3️⃣ Confirm appointment (with reporting time logic and custom date support)
+  // 3️⃣ Confirm appointment (with reporting time logic + elastic scheduling)
   async confirmAppointment(dto: ConfirmAppointmentDto) {
-    const { patientId, doctorId, slotId, date, time } = dto;
+    const { patientId, doctorId, slotId, date } = dto;
 
     const patient = await this.patientRepo.findOne({ where: { id: patientId } });
     if (!patient) throw new NotFoundException('Patient not found');
@@ -113,7 +113,6 @@ export class AppointmentService {
     if (!doctor) throw new NotFoundException('Doctor not found');
 
     const appointmentDate = date ?? new Date().toISOString().split('T')[0]; // fallback today
-    const appointmentDate = date ?? new Date().toISOString().split('T')[0];
     let reportingTime: string;
 
     if (doctor.scheduleType === 'wave') {
@@ -126,7 +125,18 @@ export class AppointmentService {
       const perSlotExisting = await this.countAppointmentsInSlot(doctor.id, appointmentDate, slot.start, slot.end);
 
       if (perSlotExisting >= slot.capacity) {
-        throw new BadRequestException('Slot capacity full');
+        // ✅ Elastic Scheduling → Create new Slot in DB
+        const newSlot = this.slotRepo.create({
+          doctor,
+          startTime: slot.end,
+          endTime: this.addMinutes(slot.end, doctor.slotDuration ?? 10),
+          capacity: doctor.capacityPerSlot ?? 1,
+          date: appointmentDate,
+          type: 'wave',
+        });
+        await this.slotRepo.save(newSlot);
+
+        throw new BadRequestException('Original slot full. New slot created via elastic scheduling.');
       }
 
       const slotDurationMins = this.durationInMinutes(slot.start, slot.end);
@@ -144,7 +154,8 @@ export class AppointmentService {
       });
 
       if ((doctor.totalCapacity ?? 0) <= existing) {
-        throw new BadRequestException('Stream capacity full for this date');
+        // ✅ Elastic scheduling placeholder for stream
+        throw new BadRequestException('Stream capacity full. Elastic scheduling pending.');
       }
 
       const perPatientMinutes = 10;
@@ -184,6 +195,14 @@ export class AppointmentService {
     return eh * 60 + em - (sh * 60 + sm);
   }
 
+  private addMinutes(time: string, mins: number): string {
+    const [h, m] = time.split(':').map(Number);
+    const total = h * 60 + m + mins;
+    const hh = Math.floor(total / 60).toString().padStart(2, '0');
+    const mm = (total % 60).toString().padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
   // 4️⃣ Appointment details
   async getAppointment(id: string) {
     const appointment = await this.appointmentRepo.findOne({
@@ -211,8 +230,6 @@ export class AppointmentService {
       },
     };
   }
-}
-
 
   // 5️⃣ Get patient appointments with filter (upcoming, past, cancelled)
   async getPatientAppointments(patientId: string, filter?: string) {
