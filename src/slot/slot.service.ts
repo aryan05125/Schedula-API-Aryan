@@ -242,12 +242,15 @@ export class SlotService {
     return slot;
   }
 
-  async getSlotsByDoctor(doctorId: number, date: string) {
+  async getSlotsByDoctor(doctorId: number, date?: string) {
+    const where: any = { doctor: { id: doctorId } };
+    if (date) where.date = date;
     return await this.slotRepo.find({
-      where: { doctor: { id: doctorId }, date },
+      where,
       order: { startTime: 'ASC' },
     });
   }
+  
 
   async expandSession(doctorId: number, date: string, newStart: string, newEnd: string) {
     const slot = await this.slotRepo.findOne({ where: { doctor: { id: doctorId }, date } });
