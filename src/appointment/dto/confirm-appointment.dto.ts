@@ -1,21 +1,19 @@
 import { IsUUID, IsNumber, IsOptional, IsString } from 'class-validator';
-
 export class ConfirmAppointmentDto {
   @IsUUID()
   patientId: string;
-
   @IsNumber()
   doctorId: number;
 
   @IsOptional()
-  @IsString()
-  slotId?: string; // for wave scheduling
+  @IsNumber()
+  slotId?: number; // ✅ for wave scheduling (optional)
 
   @IsOptional()
   @IsString()
-  date?: string; // 📅 allow booking for specific date (YYYY-MM-DD)
+  date?: string; // 📅 YYYY-MM-DD
 
   @IsOptional()
   @IsString()
-  time?: string; // optional for stream scheduling
+  reportingTime?: string; // ⏰ optional custom reporting time
 }

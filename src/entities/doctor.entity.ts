@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Patient } from './patient.entity';
 import { Appointment } from '../appointment/entities/appointment.entity';
+import { Slot } from '../slot/entities/slot.entity';
 @Entity('doctors')
 export class Doctor {
   @PrimaryGeneratedColumn()
@@ -19,25 +20,34 @@ export class Doctor {
   @Column({ type: 'enum', enum: ['wave', 'stream'], default: 'wave' })
   scheduleType: 'wave' | 'stream';
   @Column({ type: 'varchar', nullable: true })
-  consultingStart: string; // e.g. "09:00"
-
+  consultingStart: string;
   @Column({ type: 'varchar', nullable: true })
-  consultingEnd: string; // e.g. "12:00"
-
+  consultingEnd: string;
   @Column({ type: 'int', nullable: true })
-  slotDuration: number; // in minutes (for wave scheduling)
+  slotDuration: number;
   @Column({ type: 'int', nullable: true })
-  capacityPerSlot: number; // for wave scheduling
+  capacityPerSlot: number;
   @Column({ type: 'int', nullable: true })
-  totalCapacity: number; // for stream scheduling
-
-  // 🔁 Recurring pattern: which days doctor is available
+  totalCapacity: number;
   @Column('simple-array', { nullable: true })
-  recurringDays: string[]; // e.g. ["monday", "wednesday", "friday"]
+  recurringDays: string[];
+  // ✅ Future-day booking
+  @Column({ default: false })
+  allowFutureAppointments: boolean;
+  // ✅ Booking window for same-day booking
+  @Column({ type: 'varchar', nullable: true })
+  bookingWindowStart?: string;
+  @Column({ type: 'varchar', nullable: true })
+  bookingWindowEnd?: string;
+
+  // ✅ NEW: Allow next-day auto-booking if slot or consulting time is over
+  @Column({ default: false  })
+  allowNextDayAppointments: boolean;
 
   @OneToMany(() => Patient, (patient) => patient.doctor)
   patients: Patient[];
-
   @OneToMany(() => Appointment, (appointment) => appointment.doctor)
   appointments: Appointment[];
+  @OneToMany(() => Slot, (slot) => slot.doctor)
+  slots: Slot[];
 }

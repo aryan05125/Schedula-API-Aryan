@@ -6,11 +6,11 @@ import { Patient } from './entities/patient.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  url: process.env.DATABASE_URL,   // ✅ connection string for migrations
+  url: process.env.DATABASE_URL, // ✅ Single connection string for Render
   entities: [User, Doctor, Patient],
   migrations: ['src/migrations/*.ts'],
-  synchronize: false, // keep migrations safe
+  synchronize: false, // ⚠️ Keep migrations safe
   ssl: {
-    rejectUnauthorized: false, // 👈 important for Render
+    rejectUnauthorized: false, // 👈 Required for Render Cloud DB
   },
 });
