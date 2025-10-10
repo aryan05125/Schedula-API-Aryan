@@ -8,7 +8,12 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { Slot } from './entities/slot.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Appointment } from '../appointment/entities/appointment.entity';
@@ -56,9 +61,7 @@ export class SlotService {
   }
 
   private convertToHHMM(minutes: number): string {
-    const h = Math.floor(minutes / 60)
-      .toString()
-      .padStart(2, '0');
+    const h = Math.floor(minutes / 60).toString().padStart(2, '0');
     const m = (minutes % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
   }
@@ -104,7 +107,7 @@ export class SlotService {
     const customSlots: Slot[] = [];
 
     for (const appt of appointments) {
-      const reportingTime = appt.reportingTime ?? '00:00'; // ✅ safe fallback
+      const reportingTime = appt.reportingTime ?? '00:00';
 
       const exists = await this.slotRepo.findOne({
         where: {
@@ -122,8 +125,7 @@ export class SlotService {
           endTime: this.convertToHHMM(this.convertToMinutes(reportingTime) + 30),
           capacity: 1,
           doctor,
-          ...(doctor as any),
-        }) as unknown as Slot;
+        });
 
         newSlot['isCustom'] = true;
         newSlot.auditLogs = [
@@ -151,7 +153,7 @@ export class SlotService {
     return { migratedCount: customSlots.length, customSlots };
   }
 
-  // 🔄 Handle Affected Appointments (unchanged)
+  // 🔄 Handle affected appointments (with auto-reschedule support)
   private async handleAffectedAppointments(manager, slot: Slot, doctor: Doctor, actionType: string) {
     const appointments = await manager.find(Appointment, {
       where: { doctor: { id: doctor.id }, date: slot.date },
@@ -172,7 +174,7 @@ export class SlotService {
     for (const appt of appointments) {
       if (count < capacity) {
         const newTime = this.convertToHHMM(this.convertToMinutes(start) + count * interval);
-        appt.reportingTime = newTime ?? '00:00'; // ✅ safe
+        appt.reportingTime = newTime ?? '00:00';
         await manager.save(appt);
         count++;
         await this.notificationService.createNotification({
@@ -196,46 +198,117 @@ export class SlotService {
       });
 
       const cancelledIds = cancelled.map((c) => c.id);
-      this.logger.log(`[SlotService] Found ${cancelled.length} affected appointments outside new window`);
-      this.logger.log(`[AppointmentService] Cancelling appointments: [${cancelledIds.join(', ')}]`);
+      this.logger.log(`[SlotService] ${cancelled.length} appointments cancelled`);
+      this.logger.log(`[AppointmentService] Cancelling: [${cancelledIds.join(', ')}]`);
 
-      let rescheduleResults: {
-        oldAppointmentId: string;
-        newAppointmentId: string | null;
-        note?: string;
-        newDate?: string;
-      }[] = [];
       try {
-        rescheduleResults = await this.appointmentService.autoRescheduleCancelledAppointments(
-          cancelled,
-          doctor,
-        );
+        const rescheduleResults =
+          await this.appointmentService.autoRescheduleCancelledAppointments(cancelled, doctor);
+        this.logger.log(`✅ Auto-reschedule processed (${rescheduleResults.length})`);
       } catch (err) {
         this.logger.warn(`[SlotService] Auto-reschedule failed: ${String(err)}`);
-        rescheduleResults = cancelled.map((c) => ({
-          oldAppointmentId: c.id,
-          newAppointmentId: null,
-          note: `autoReschedule failed: ${String(err)}`,
-        }));
       }
+    }
+  }
 
-      let rescheduledCount = 0;
-      let waitingListCount = 0;
-      for (const r of rescheduleResults) {
-        if (r.newAppointmentId) {
-          rescheduledCount++;
-          this.logger.log(`[AutoReschedule] Appointment #${r.oldAppointmentId} → rescheduled to ${r.newDate}`);
-        } else if (r.note && r.note.toLowerCase().includes('waiting')) {
-          waitingListCount++;
-          this.logger.log(`[AutoReschedule] Appointment #${r.oldAppointmentId} → added to waiting list`);
-        } else {
-          this.logger.log(`[AutoReschedule] Appointment #${r.oldAppointmentId} → ${r.note ?? 'no action'}`);
-        }
-      }
+  // -------------------------------
+  // ✅ Controller Methods
+  // -------------------------------
 
-      this.logger.log(
-        `✅ Auto-reschedule complete (${rescheduleResults.length} processed, ${rescheduledCount} rescheduled, ${waitingListCount} waiting list)`,
-      );
+  async createSlot(data: any) {
+    const doctor = await this.doctorRepo.findOne({ where: { id: data.doctorId } });
+    if (!doctor) throw new NotFoundException('Doctor not found');
+
+    this.validateTimeRange(data.startTime, data.endTime);
+    await this.checkOverlap(doctor.id, data.date, data.startTime, data.endTime);
+
+    const slot = this.slotRepo.create({
+      ...data,
+      doctor,
+    });
+
+    const saved = await this.slotRepo.save(slot);
+    this.logger.log(`✅ Slot created for Doctor #${doctor.id} on ${data.date}`);
+    return saved;
+  }
+
+  async updateSlot(id: number, data: any) {
+    const slot = await this.slotRepo.findOne({ where: { id } });
+    if (!slot) throw new NotFoundException('Slot not found');
+
+    Object.assign(slot, data);
+    await this.slotRepo.save(slot);
+    this.logger.log(`✏️ Slot #${id} updated`);
+    return slot;
+  }
+
+  async getSlotsByDoctor(doctorId: number, date: string) {
+    return await this.slotRepo.find({
+      where: { doctor: { id: doctorId }, date },
+      order: { startTime: 'ASC' },
+    });
+  }
+
+  async expandSession(doctorId: number, date: string, newStart: string, newEnd: string) {
+    const slot = await this.slotRepo.findOne({ where: { doctor: { id: doctorId }, date } });
+    if (!slot) throw new NotFoundException('Slot not found');
+
+    this.validateTimeRange(newStart, newEnd);
+    slot.startTime = newStart;
+    slot.endTime = newEnd;
+
+    await this.slotRepo.save(slot);
+    this.logger.log(`📈 Session expanded for Doctor #${doctorId} on ${date}`);
+    return slot;
+  }
+
+  async shrinkSession(doctorId: number, date: string, newStart: string, newEnd: string) {
+    const slot = await this.slotRepo.findOne({ where: { doctor: { id: doctorId }, date } });
+    if (!slot) throw new NotFoundException('Slot not found');
+
+    this.validateTimeRange(newStart, newEnd);
+    slot.shrinkedStart = newStart;
+    slot.shrinkedEnd = newEnd;
+
+    await this.slotRepo.save(slot);
+    this.logger.log(`📉 Session shrinked for Doctor #${doctorId} on ${date}`);
+    return slot;
+  }
+
+  async adjustSlotCapacity(doctorId: number, slotId: number, newCapacity: number) {
+    const slot = await this.slotRepo.findOne({ where: { id: slotId, doctor: { id: doctorId } } });
+    if (!slot) throw new NotFoundException('Slot not found');
+
+    slot.capacity = newCapacity;
+    await this.slotRepo.save(slot);
+    this.logger.log(`⚙️ Capacity adjusted for Slot #${slotId}`);
+    return slot;
+  }
+
+  async reduceSubslotDuration(doctorId: number, slotId: number, reductionPercent: number) {
+    const slot = await this.slotRepo.findOne({ where: { id: slotId, doctor: { id: doctorId } } });
+    if (!slot) throw new NotFoundException('Slot not found');
+
+    const originalDuration = this.getDurationInMinutes(slot.startTime, slot.endTime);
+    const reducedDuration = originalDuration - (originalDuration * reductionPercent) / 100;
+    slot.endTime = this.convertToHHMM(this.convertToMinutes(slot.startTime) + reducedDuration);
+
+    await this.slotRepo.save(slot);
+    this.logger.log(`⏱️ Reduced duration for Slot #${slotId} by ${reductionPercent}%`);
+    return slot;
+  }
+
+  async applySchedulingUpdate(data: any) {
+    const { doctorId, date, action } = data;
+    if (!doctorId || !date || !action) throw new BadRequestException('Invalid scheduling data');
+
+    switch (action) {
+      case 'expand':
+        return this.expandSession(doctorId, date, data.newStart, data.newEnd);
+      case 'shrink':
+        return this.shrinkSession(doctorId, date, data.newStart, data.newEnd);
+      default:
+        throw new BadRequestException('Unsupported scheduling action');
     }
   }
 }
