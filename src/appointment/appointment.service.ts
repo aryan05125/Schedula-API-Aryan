@@ -504,7 +504,8 @@ async confirmAppointment(dto: ConfirmAppointmentDto) {
     });
 
     for (const appt of futureAppointments) {
-      const [hh, mm] = appt.reportingTime.split(':').map(Number);
+      const reportingTime = appt.reportingTime ?? '00:00';
+      const [hh, mm] = reportingTime.split(':').map(Number);
       const totalMins = hh * 60 + mm + shift_minutes;
       const newHH = String(Math.floor(totalMins / 60)).padStart(2, '0');
       const newMM = String(totalMins % 60).padStart(2, '0');
@@ -524,7 +525,7 @@ async confirmAppointment(dto: ConfirmAppointmentDto) {
     };
   }
 
-  // ✅ Reschedule Selected Appointments
+  // ✅ Reschedule Selected Appointments (Fixed)
   async rescheduleSelectedAppointments(
     appointmentIds: string[],
     shift_minutes: number,
@@ -535,7 +536,8 @@ async confirmAppointment(dto: ConfirmAppointmentDto) {
     });
 
     for (const appt of appointments) {
-      const [hh, mm] = appt.reportingTime.split(':').map(Number);
+      const reportingTime = appt.reportingTime ?? '00:00';
+      const [hh, mm] = reportingTime.split(':').map(Number);
       const totalMins = hh * 60 + mm + shift_minutes;
       const newHH = String(Math.floor(totalMins / 60)).padStart(2, '0');
       const newMM = String(totalMins % 60).padStart(2, '0');
