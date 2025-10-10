@@ -7,19 +7,24 @@ import {
 } from 'typeorm';
 import { Patient } from '../../entities/patient.entity';
 import { Doctor } from '../../entities/doctor.entity';
+
 @Entity('appointments')
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
   @ManyToOne(() => Patient, (patient) => patient.appointments, { eager: true })
   patient: Patient;
+
   @ManyToOne(() => Doctor, (doctor) => doctor.appointments, { eager: true })
   doctor: Doctor;
+
   @Column()
   date: string;
 
-  @Column()
-  reportingTime: string; // HH:mm
+  // ✅ Fix: make reportingTime nullable for backward compatibility
+  @Column({ type: 'varchar', nullable: true })
+  reportingTime?: string; // HH:mm
 
   @Column({ default: 'confirmed' })
   status: string;
